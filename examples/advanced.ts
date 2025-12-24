@@ -189,3 +189,9 @@ console.log("Anonymous:", getUserName(null));
 
 console.log("Color:", getColorName(Color.Blue));
 console.log("Default greeting:", greetWithDefault());
+
+enum AnimalType {
+  Dog,
+  Cat,
+  Bird,
+}

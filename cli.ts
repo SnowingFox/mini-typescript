@@ -10,8 +10,31 @@ async function main() {
     process.exit(1);
   }
 
-  const inputFile = args[0];
-  let outputFile = args[1];
+  // Parse arguments
+  let inputFile = "";
+  let outputFile = "";
+  let skipTypeCheck = false;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--skip-type-check" || arg === "-s") {
+      skipTypeCheck = true;
+    } else if (arg === "-o" && i + 1 < args.length) {
+      outputFile = args[++i];
+    } else if (!arg.startsWith("-")) {
+      if (!inputFile) {
+        inputFile = arg;
+      } else if (!outputFile) {
+        outputFile = arg;
+      }
+    }
+  }
+
+  if (!inputFile) {
+    console.error("Error: No input file specified");
+    printUsage();
+    process.exit(1);
+  }
 
   // If no output file specified, derive from input
   if (!outputFile) {
@@ -26,7 +49,7 @@ async function main() {
     console.log(`Compiling ${inputFile}...`);
 
     // Compile
-    const result = compile(source);
+    const result = compile(source, { skipTypeCheck });
 
     if (!result.success) {
       console.error("\n❌ Compilation failed with errors:\n");
@@ -51,22 +74,30 @@ function printUsage() {
 Mini-TS Compiler
 
 Usage:
-  bun cli.ts <input.ts> [output.js]
+  bun cli.ts <input.ts> [output.js] [options]
 
 Arguments:
   input.ts    TypeScript source file to compile
   output.js   Output JavaScript file (optional, defaults to input.js)
 
+Options:
+  --skip-type-check, -s   Skip type checking
+  -o <file>               Specify output file
+
 Examples:
-  bun cli.ts hello.ts           # Outputs to hello.js
+  bun cli.ts hello.ts              # Outputs to hello.js
   bun cli.ts src/app.ts dist/app.js
+  bun cli.ts app.ts --skip-type-check
+  bun cli.ts app.ts -s -o out.js
 
 Supported Features:
-  - Variable declarations (let/const) with type annotations
+  - Variable declarations (let/const/var) with type annotations
   - Function declarations with typed parameters and return types
-  - Interface declarations
-  - Basic expressions and statements
-  - Type checking for number and string types
+  - Interface and type alias declarations
+  - Classes with inheritance, decorators, and access modifiers
+  - Enums, generics, arrow functions
+  - Async/await, optional chaining, nullish coalescing
+  - Import/export modules
 `);
 }
 

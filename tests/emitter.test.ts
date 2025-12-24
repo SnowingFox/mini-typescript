@@ -38,6 +38,32 @@ describe("Emitter", () => {
     expect(output).not.toContain("name: string");
   });
 
+  test("emits enum declarations", () => {
+    const output = transpile("enum Color { Red, Green, Blue }");
+
+    // Enum uses IIFE style for bidirectional mapping
+    expect(output).toContain("var Color;");
+    expect(output).toContain('Color["Red"] = 0');
+    expect(output).toContain('Color["Green"] = 1');
+    expect(output).toContain('Color["Blue"] = 2');
+  });
+
+  test("emits enum with explicit values", () => {
+    const output = transpile("enum Status { Active = 1, Inactive = 0 }");
+
+    expect(output).toContain("var Status;");
+    expect(output).toContain('Status["Active"] = 1');
+    expect(output).toContain('Status["Inactive"] = 0');
+  });
+
+  test("emits string enum", () => {
+    const output = transpile('enum Direction { Up = "UP", Down = "DOWN" }');
+
+    expect(output).toContain("var Direction;");
+    expect(output).toContain('Direction["Up"] = "UP"');
+    expect(output).toContain('Direction["Down"] = "DOWN"');
+  });
+
   test("emits if statement correctly", () => {
     const output = transpile("if (x > 0) { return 1; }");
 

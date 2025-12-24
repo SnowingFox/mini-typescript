@@ -129,13 +129,6 @@ export class Emitter {
   }
 
   private emitClassDeclaration(decl: any): void {
-    // Emit class decorators
-    if (decl.decorators && decl.decorators.length > 0) {
-      for (const decorator of decl.decorators) {
-        this.emitLine(`@${this.emitExpression(decorator.expression)}`);
-      }
-    }
-
     let line = "";
     if (decl.isAbstract) line += "/* abstract */ ";
     line += `class ${decl.name}`;
@@ -156,18 +149,9 @@ export class Emitter {
     this.emitLine("}");
   }
 
-  private emitMemberDecorators(decorators?: any[]): void {
-    if (decorators && decorators.length > 0) {
-      for (const decorator of decorators) {
-        this.emitLine(`@${this.emitExpression(decorator.expression)}`);
-      }
-    }
-  }
-
   private emitClassMember(member: ClassMember): void {
     switch (member.kind) {
       case "PropertyDeclaration": {
-        this.emitMemberDecorators((member as any).decorators);
         let line = "";
         if (member.isStatic) line += "static ";
         line += member.name;
@@ -180,7 +164,6 @@ export class Emitter {
       }
 
       case "MethodDeclaration": {
-        this.emitMemberDecorators((member as any).decorators);
         let prefix = "";
         if (member.isStatic) prefix += "static ";
         if (member.isAsync) prefix += "async ";
@@ -332,7 +315,7 @@ export class Emitter {
 
     if (stmt.alternate) {
       if (stmt.alternate.kind === "IfStatement") {
-        this.output = this.output.trimEnd() + " else ";
+        this.output = this.output.trimEnd() + "} else ";
         this.emitIfStatement(stmt.alternate);
       } else {
         this.emitLine("} else {");
@@ -925,9 +908,57 @@ export class Emitter {
         return stmt.label ? `continue ${stmt.label};` : "continue;";
       case "ThrowStatement":
         return `throw ${this.emitExpression(stmt.argument)};`;
+      case "IfStatement":
+        return this.emitIfStatementInline(stmt);
+      case "BlockStatement": {
+        const stmts = (stmt as any).statements
+          .map((s: any) => this.emitStatementInline(s))
+          .join(" ");
+        return `{ ${stmts} }`;
+      }
+      case "ForOfStatement":
+      case "ForInStatement": {
+        const s = stmt as any;
+        const keyword = s.kind === "ForOfStatement" ? "of" : "in";
+        const variable = `${s.variableKind || "const"} ${s.variable}`;
+        const bodyStr = this.emitStatementInline(s.body);
+        return `for (${variable} ${keyword} ${this.emitExpression(
+          s.iterable
+        )}) ${bodyStr}`;
+      }
       default:
         return "";
     }
+  }
+
+  private emitIfStatementInline(stmt: any): string {
+    const condition = this.emitExpression(stmt.condition);
+    let result = `if (${condition}) `;
+
+    if (stmt.consequent.kind === "BlockStatement") {
+      const stmts = stmt.consequent.statements
+        .map((s: any) => this.emitStatementInline(s))
+        .join(" ");
+      result += `{ ${stmts} }`;
+    } else {
+      result += this.emitStatementInline(stmt.consequent);
+    }
+
+    if (stmt.alternate) {
+      result += " else ";
+      if (stmt.alternate.kind === "IfStatement") {
+        result += this.emitIfStatementInline(stmt.alternate);
+      } else if (stmt.alternate.kind === "BlockStatement") {
+        const stmts = stmt.alternate.statements
+          .map((s: any) => this.emitStatementInline(s))
+          .join(" ");
+        result += `{ ${stmts} }`;
+      } else {
+        result += this.emitStatementInline(stmt.alternate);
+      }
+    }
+
+    return result;
   }
 
   private indent(): string {

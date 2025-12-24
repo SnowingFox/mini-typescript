@@ -22,14 +22,18 @@ function Controller(path: string) {
 function Get(route: string) {
   return function (target: any, propertyKey: string, descriptor: any): void {
     target.__routes = target.__routes || [];
-    target.__routes.push({ method: "GET", route, handler: propertyKey });
+    target.__routes.push({ method: "GET", route: route, handler: propertyKey });
   };
 }
 
 function Post(route: string) {
   return function (target: any, propertyKey: string, descriptor: any): void {
     target.__routes = target.__routes || [];
-    target.__routes.push({ method: "POST", route, handler: propertyKey });
+    target.__routes.push({
+      method: "POST",
+      route: route,
+      handler: propertyKey,
+    });
   };
 }
 
@@ -40,55 +44,19 @@ function Inject(token: string) {
   };
 }
 
-function Log() {
-  return function (target: any, propertyKey: string, descriptor: any): any {
-    const original = descriptor.value;
-    descriptor.value = function (...args: any[]) {
-      console.log(
-        "Calling " + propertyKey + " with args: " + JSON.stringify(args)
-      );
-      const result = original.apply(this, args);
-      console.log("Result: " + JSON.stringify(result));
-      return result;
-    };
-    return descriptor;
-  };
-}
-
-function Validate() {
-  return function (target: any, propertyKey: string, descriptor: any): any {
-    const original = descriptor.value;
-    descriptor.value = function (...args: any[]) {
-      for (const arg of args) {
-        if (arg === null || arg === undefined) {
-          throw new Error("Validation failed: null or undefined argument");
-        }
-      }
-      return original.apply(this, args);
-    };
-    return descriptor;
-  };
-}
-
 // ============================================
 // Service Layer with Decorators
 // ============================================
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
-
 @Injectable()
 class UserRepository {
-  private users: User[] = [];
+  private users: any[] = [];
 
-  findAll(): User[] {
+  findAll(): any[] {
     return this.users;
   }
 
-  findById(id: number): User | null {
+  findById(id: number): any {
     for (const user of this.users) {
       if (user.id === id) {
         return user;
@@ -97,42 +65,28 @@ class UserRepository {
     return null;
   }
 
-  create(user: User): User {
+  create(user: any): any {
     this.users.push(user);
     return user;
-  }
-
-  delete(id: number): boolean {
-    const index = this.users.findIndex((u: User) => u.id === id);
-    if (index >= 0) {
-      this.users.splice(index, 1);
-      return true;
-    }
-    return false;
   }
 }
 
 @Injectable()
 class UserService {
   @Inject("UserRepository")
-  private repository: UserRepository;
+  private repository: any;
 
-  @Log()
-  @Validate()
-  getAllUsers(): User[] {
+  getAllUsers(): any[] {
     return this.repository.findAll();
   }
 
-  @Log()
-  getUserById(id: number): User | null {
+  getUserById(id: number): any {
     return this.repository.findById(id);
   }
 
-  @Log()
-  @Validate()
-  createUser(name: string, email: string): User {
+  createUser(name: string, email: string): any {
     const id = Date.now();
-    const user: User = { id, name, email };
+    const user = { id: id, name: name, email: email };
     return this.repository.create(user);
   }
 }
@@ -141,30 +95,20 @@ class UserService {
 // Controller Layer with Decorators
 // ============================================
 
-interface Request {
-  params: Record<string, string>;
-  body: any;
-}
-
-interface Response {
-  json: (data: any) => void;
-  status: (code: number) => Response;
-}
-
 @Controller("/api/users")
 @Injectable()
 class UserController {
   @Inject("UserService")
-  private userService: UserService;
+  private userService: any;
 
   @Get("/")
-  getUsers(req: Request, res: Response): void {
+  getUsers(req: any, res: any): void {
     const users = this.userService.getAllUsers();
     res.json(users);
   }
 
   @Get("/:id")
-  getUser(req: Request, res: Response): void {
+  getUser(req: any, res: any): void {
     const id = parseInt(req.params.id);
     const user = this.userService.getUserById(id);
     if (user) {
@@ -175,8 +119,7 @@ class UserController {
   }
 
   @Post("/")
-  @Validate()
-  createUser(req: Request, res: Response): void {
+  createUser(req: any, res: any): void {
     const name: string = req.body.name;
     const email: string = req.body.email;
     const user = this.userService.createUser(name, email);

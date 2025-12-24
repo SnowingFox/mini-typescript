@@ -1,0 +1,18 @@
+{
+  "name": "mini-ts",
+  "version": "0.1.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "compile": "bun cli.ts",
+    "test": "bun test",
+    "example": "bun cli.ts examples/hello.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
